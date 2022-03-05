@@ -110,7 +110,7 @@ def mainmenu_option4(students_list):
             # On récupère l'élève associé à l'ID
             student = students_list[student_id]
             # On demande le siège où l'asseoir
-            student_seat = interface.console_ask_student_seat()
+            student_seat = interface.console_ask_student_seat(seatingplan)
             # Si on a pu récupérer une valeur
             if seatingplan.is_a_seat(student_seat):
                 # On positionne l'élève
@@ -187,8 +187,8 @@ def mainmenu_option7(students_list):
         Plan de classe possible.
     :rtype: iterator
     """
-    number_of_proposals = input('Nombre maximal de propositions à faire : ')
-    number_of_proposals = int(number_of_proposals)
+    number_of_proposals = input('Nombre maximal de propositions à faire (5 par défaut) : ')
+    number_of_proposals = int(number_of_proposals or "5")
     print('Presser Ctrl-C pour interrompre...')
     try:
         return iter(list(islice(engine.solve(seatingplan, students_list),
@@ -208,7 +208,8 @@ def mainmenu_option8():
     :return: None
     """
     print('Effacement du plan de classe...')
-    engine.flush_seatingplan(seatingplan)
+    # engine.flush_seatingplan(seatingplan)
+    seatingplan.flush()
 
 
 def mainmenu_option_next(solution):
@@ -225,12 +226,25 @@ def mainmenu_option_next(solution):
     """
     if solution:
         try:
-            engine.flush_seatingplan(seatingplan)
-            engine.write_solution_to_seatingplan(next(solution), seatingplan)
+            # engine.flush_seatingplan(seatingplan)
+            seatingplan.flush()
+            # engine.write_solution_to_seatingplan(next(solution), seatingplan)
+            seatingplan.write_solution(next(solution))
         except StopIteration:
             print("Il n'y a plus de propositions de placement")
     else:
         print("Vous devez le calcul de solutions d'abord")
+
+
+def mainmenu_option9():
+    """Option 9 du menu principal.
+
+    
+
+    :return: None
+    """
+    print('Teste plan de classe...')
+    print(engine.verify_solution(seatingplan))
 
 
 def settingsmenu():
@@ -286,9 +300,14 @@ def mainmenu():
 
         elif (command == '7'):
             proposals = mainmenu_option7(students_list)
+            # On affiche la première solution
+            mainmenu_option_next(proposals)
 
         elif (command == '8'):
             mainmenu_option8()
+
+        elif (command == '9'):
+            mainmenu_option9()
 
         elif (command == 'n'):
             mainmenu_option_next(proposals)
@@ -300,8 +319,11 @@ def mainmenu():
                 return s
 
             # DEBUG: print solutions
-            for s in engine.solve(seatingplan, students_list):
-                print({p: f(s) for p, s in s.items()})
+            try:
+                for s in engine.solve(seatingplan, students_list):
+                    print({p: f(s) for p, s in s.items()})
+            except KeyboardInterrupt:
+                pass
             # DEBUG
 
         elif (command == 's'):

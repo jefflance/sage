@@ -46,72 +46,6 @@ class Engine:
         self.DELTA_FOR_MAX_CHAT_LVL_4 = 2
         self.DELTA_FOR_MAX_CHAT_LVL_5 = 2
 
-    def get_neighbourhood(self, seatingplan, seat, radius):
-        """Dans un plan de classe, retourne le voisinage dans un rayon donné
-        d'une place.
-
-        :param seatingplan:
-            Plan de classe.
-        :type seatingplan: SeatingPlan
-        :param seat:
-            Coordonnées de la place dans le plan de classe.
-        :type seat: tuple
-        :param radius:
-            Rayon du voisinage.
-        :type radius: int
-
-        :return:
-            Liste des places voisines.
-        :rtype: list
-        """
-        # La liste des voisins
-        neighbourhood = []
-        # 'position' est un tuple de coordonnées (i, j) où:
-        # - i compris entre 0 et seatingplan.row-1
-        # - j compris entre 0 et seatingplan.col-1
-        #
-        # Les voisins sont les élèves aux places de coordonnées situées
-        # dans le carré passant par les points suivants :
-        # (i, j-radius), (i, j+radius), (i-radius, j), (i+radius, j),
-        # (i-radius, j-radius), (i-radius, j+radius),
-        # (i+radius, j-radius) et (i+radius, j+radius)
-        # On analyse ce voisinage et on n'ajoute un voisin que s'il y en a un
-        for i in range(-radius, radius+1, 1):
-            for j in range(-radius, radius+1, 1):
-                # Traitons la place voisine
-                neighbour_seat = (seat[0]+i, seat[1]+j)
-                # print("Place: ", neighbour_seat)    # DEBUG #
-                # Cette place est-elle ?
-                # - différente de la place autour de laquelle on regarde
-                # - bien comprise dans le plan de classe (coordonnées de
-                #   dépassant pas celles du plan de classe)
-                if (neighbour_seat != seat and
-                        0 <= neighbour_seat[0] <= seatingplan.row-1 and
-                        0 <= neighbour_seat[1] <= seatingplan.col-1):
-                    neighbourhood.append(neighbour_seat)
-        # On retourne notre liste de places voisines
-        return neighbourhood
-
-    def are_safe_neighbours(self, student, neighbour, delta_chat_lvl):
-        """Indique si deux élèves constituent de bons voisins.
-        C'est-à-dire si la différence de leur coefficient de bavardage
-        est d'une certaine valeur.
-
-        :param student:
-            Élève.
-        :type student: Student
-        :param neighbour:
-            Élève.
-        :type neighbour: Student
-        :param delta_chat_lvl:
-            Différence entre les coefficients de bavardage.
-        :type delta_chat_lvl: int
-
-        :rtype: bool
-        """
-        return bool(abs(student.chat_lvl - neighbour.chat_lvl)
-                    >= delta_chat_lvl)
-
     def respect_constraints(self, seat, student, seatingplan, solution):
         """Indique si une place associée à une élève satisfait aux
         contraintes, à savoir si :
@@ -155,9 +89,8 @@ class Engine:
         else:
             # Si non, veŕifions le voisinage de la place
             # Récupérons le voisinage de la place en cours
-            neighbourhood = self.get_neighbourhood(seatingplan,
-                                                   seat,
-                                                   self.NEIGHBOURHOOD_RADIUS)
+            neighbourhood = seatingplan.get_seat_neighbourhood(seat,
+                                                               self.NEIGHBOURHOOD_RADIUS)
 
             for neighbour_seat in neighbourhood:
                 # On ne teste les contraintes que sur les sièges déjà occupés
@@ -174,34 +107,83 @@ class Engine:
                     # Les contraintes portent sur la différence de
                     # coefficient de bavardage entre deux voisins:
                     if max_chat_lvl == 5:
-                        result = result and self.are_safe_neighbours(
-                                            student,
+                        result = result and student.has_safe_neighbour(
                                             neighbour,
                                             self.DELTA_FOR_MAX_CHAT_LVL_5)
 
                     elif max_chat_lvl == 4:
-                        result = result and self.are_safe_neighbours(
-                                                student,
-                                                neighbour,
-                                                self.DELTA_FOR_MAX_CHAT_LVL_4)
+                        result = result and student.has_safe_neighbour(
+                                            neighbour,
+                                            self.DELTA_FOR_MAX_CHAT_LVL_4)
 
                     elif max_chat_lvl == 3:
-                        result = result and self.are_safe_neighbours(
-                                                student,
-                                                neighbour,
-                                                self.DELTA_FOR_MAX_CHAT_LVL_3)
+                        result = result and student.has_safe_neighbour(
+                                            neighbour,
+                                            self.DELTA_FOR_MAX_CHAT_LVL_3)
 
                     elif max_chat_lvl == 2:
-                        result = result and self.are_safe_neighbours(
-                                                student,
-                                                neighbour,
-                                                self.DELTA_FOR_MAX_CHAT_LVL_2)
+                        result = result and student.has_safe_neighbour(
+                                            neighbour,
+                                            self.DELTA_FOR_MAX_CHAT_LVL_2)
 
                     elif max_chat_lvl == 1:
-                        result = result and self.are_safe_neighbours(
-                                                student,
-                                                neighbour,
-                                                self.DELTA_FOR_MAX_CHAT_LVL_1)
+                        result = result and student.has_safe_neighbour(
+                                            neighbour,
+                                            self.DELTA_FOR_MAX_CHAT_LVL_1)
+
+                    else:
+                        result = result and True
+                # Le siège voisin n'est pas occupé, il est donc valide
+                result = result and True
+        # retournons la validité de l'association
+        return result
+
+    def verify_solution(self, seatingplan):
+        solution = seatingplan.mapping
+        result = True
+        for seat in list(solution.keys()):
+            student = seatingplan.get_student(seat)
+            neighbourhood = seatingplan.get_seat_neighbourhood(seat,
+                                                               self.NEIGHBOURHOOD_RADIUS)
+
+            for neighbour_seat in neighbourhood:
+                # On ne teste les contraintes que sur les sièges déjà occupés
+                # donc sur ceux faisant déjà partie des solutions
+                if neighbour_seat in list(solution.keys()):
+                    # On récupère l'élève du siège voisin
+                    neighbour = solution[neighbour_seat]
+
+                    # Lequel de l'élève en cours ou du voisin
+                    # est le plus bavard ?
+                    max_chat_lvl = max(student.chat_lvl,
+                                       neighbour.chat_lvl)
+
+                    # Les contraintes portent sur la différence de
+                    # coefficient de bavardage entre deux voisins:
+                    if max_chat_lvl == 5:
+                        result = result and student.has_safe_neighbour(
+                                            neighbour,
+                                            self.DELTA_FOR_MAX_CHAT_LVL_5)
+
+                    elif max_chat_lvl == 4:
+                        result = result and student.has_safe_neighbour(
+                                            neighbour,
+                                            self.DELTA_FOR_MAX_CHAT_LVL_4)
+
+                    elif max_chat_lvl == 3:
+                        result = result and student.has_safe_neighbour(
+                                            neighbour,
+                                            self.DELTA_FOR_MAX_CHAT_LVL_3)
+
+                    elif max_chat_lvl == 2:
+                        result = result and student.has_safe_neighbour(
+                                            neighbour,
+                                            self.DELTA_FOR_MAX_CHAT_LVL_2)
+
+                    elif max_chat_lvl == 1:
+                        result = result and student.has_safe_neighbour(
+                                            neighbour,
+                                            self.DELTA_FOR_MAX_CHAT_LVL_1)
 
                     else:
                         result = result and True
@@ -320,64 +302,3 @@ class Engine:
                 elif idx_student == 0:
                     end = True
 
-    def write_solution_to_seatingplan(self, solution, seatingplan):
-        """Place les élèves de la solution dans un plan de classe.
-
-        :param solution:
-            Solution de positionnement des élèves dans le plan de classe.
-        :type solution: dict
-        :param seatingplan:
-            Plan de classe.
-        :type seatingplan: SeatingPlan
-
-        :return: None
-        """
-        for place, student in solution.items():
-            if student is not None:
-                seatingplan.place_student(student, place)
-            else:
-                seatingplan.mapping[place] = None
-
-    def flush_seatingplan(self, seatingplan):
-        """Vide le plan de classe. Supprime tous les élèves placés.
-
-        :param seatingplan:
-            Plan de classe.
-        :type seatingplan: SeatingPlan
-
-        :return: None
-        """
-        for seat in list(seatingplan.mapping.keys()):
-            student = seatingplan.get_student(seat)
-            if student is not None:
-                seatingplan.remove_student(student)
-
-    def get_corners(self, seatingplan):
-        """ Renvoie, pour un plan de classe, la liste des places aux coins
-        ou extrémités.
-        C'est-à-dire une place située en : (0,0), (0,m-1),
-        (n-1,0) ou (n-1,m-1) pour un plan de classe de dimensions n x m.
-
-        :param seatingplan:
-            Plan de classe.
-        :type seatingplan: SeatingPlan
-
-        :return:
-            Liste des places aux coins/extrémités.
-        :rtype: list
-        """
-        # Dimensions du plan de classe
-        n = seatingplan.raw
-        m = seatingplan.col
-
-        # Le plan de classe est un tableau de dimensions n x m :
-        # - si n>1 et m>1, il possède 4 coins
-        # - si n=1 et m>1, il en possède 2
-        # - si n>1 et m=1, il en possède 2
-        # - si n=1 et m=1, il en possède 1
-        #
-        # On utilise donc un set qui va permettre d'éliminer les doublons de
-        # coordonnées
-        # Ce set est ensuite "traduit" en liste
-        corners = list({(0, 0), (n-1, 0), (0, m-1), (n-1, m-1)})
-        return corners

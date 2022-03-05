@@ -32,3 +32,20 @@ class Student:
         self.name = name
         self.chat_lvl = chat_lvl
         self.friends = friends
+
+    def has_safe_neighbour(self, neighbour, delta_chat_lvl):
+        """Indique si deux élèves constituent de bons voisins.
+        C'est-à-dire si la différence de leur coefficient de bavardage
+        est d'une certaine valeur.
+
+        :param neighbour:
+            Élève.
+        :type neighbour: Student
+        :param delta_chat_lvl:
+            Différence entre les coefficients de bavardage.
+        :type delta_chat_lvl: int
+
+        :rtype: bool
+        """
+        return bool(abs(self.chat_lvl - neighbour.chat_lvl)
+                    >= delta_chat_lvl)

@@ -384,7 +384,7 @@ def console_ask_student_id():
 #
 # Option 4
 #
-def console_ask_student_seat():
+def console_ask_student_seat(seatingplan):
     """Demande à l'utilisateur les coordonnées d'une place
     dans le plan de classe.
 
@@ -401,10 +401,9 @@ def console_ask_student_seat():
         # sinon, on intercepte une exception
         student_row = int(student_row)
         # Si la valeur est entière mais négative
-        if student_row <= 0:
+        if student_row < 1 or student_row > seatingplan.row:
             # On lève une exception
-            raise ValueError('Le numéro de rangée doit être strictement '
-                             'positif')
+            raise ValueError('Mauvais range')
 
         # Tout va bien, on passe au numéro de colonne
         student_col = input('\nVeuillez entrer le numéro de colonne où vous'
@@ -415,10 +414,10 @@ def console_ask_student_seat():
             # sinon, on intercepte une exception
             student_col = int(student_col)
             # Si la valeur est entière mais négative
-            if student_col <= 0:
+            if student_row < 1 or student_col > seatingplan.col:
                 # On lève une exception
-                raise ValueError('Le numéro de colonne doit être strictement '
-                                 'positif')
+                raise ValueError('Mauvais range')
+
         except ValueError:
             print('La valeur saisie pour le numéro de colonne est invalide')
             student_col = None
@@ -429,7 +428,7 @@ def console_ask_student_seat():
 
     # On renvoit les valeurs entrées mais ajustées à l'indexation
     # du plan de classe
-    return student_row, student_col
+    return student_row-1, student_col-1
 
 
 #

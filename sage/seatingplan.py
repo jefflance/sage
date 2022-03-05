@@ -57,6 +57,36 @@ class SeatingPlan:
         self.mapping = {(i, j): None for i in range(row)
                         for j in range(col)}
 
+    def get_corners(self):
+        """ Renvoie, pour un plan de classe, la liste des places aux coins
+        ou extrémités.
+        C'est-à-dire une place située en : (0,0), (0,m-1),
+        (n-1,0) ou (n-1,m-1) pour un plan de classe de dimensions n x m.
+
+        :param seatingplan:
+            Plan de classe.
+        :type seatingplan: SeatingPlan
+
+        :return:
+            Liste des places aux coins/extrémités.
+        :rtype: list
+        """
+        # Dimensions du plan de classe
+        n = self.raw
+        m = self.col
+
+        # Le plan de classe est un tableau de dimensions n x m :
+        # - si n>1 et m>1, il possède 4 coins
+        # - si n=1 et m>1, il en possède 2
+        # - si n>1 et m=1, il en possède 2
+        # - si n=1 et m=1, il en possède 1
+        #
+        # On utilise donc un set qui va permettre d'éliminer les doublons de
+        # coordonnées
+        # Ce set est ensuite "traduit" en liste
+        corners = list({(0, 0), (n-1, 0), (0, m-1), (n-1, m-1)})
+        return corners
+
     def is_a_seat(self, seat):
         """Renvoie si une place est valide ou non.
 
@@ -115,10 +145,58 @@ class SeatingPlan:
         :rtype: tuple or False
         """
         try:
-            return list(self.mapping.keys())[list(self.mapping.values())
+            return self.get_seats()[list(self.mapping.values())
                                              .index(student)]
+            # return list(self.mapping.keys())[list(self.mapping.values())
+            #                                  .index(student)]
         except ValueError:
             return False
+
+    def get_seat_neighbourhood(self, seat, radius):
+        """Dans un plan de classe, retourne le voisinage dans un rayon donné
+        d'une place.
+
+        :param seat:
+            Coordonnées de la place dans le plan de classe.
+        :type seat: tuple
+        :param radius:
+            Rayon du voisinage.
+        :type radius: int
+
+        :return:
+            Liste des places voisines.
+        :rtype: list
+        """
+        # La liste des voisins
+        neighbourhood = []
+        # 'position' est un tuple de coordonnées (i, j) où:
+        # - i compris entre 0 et seatingplan.row-1
+        # - j compris entre 0 et seatingplan.col-1
+        #
+        # Les voisins sont les élèves aux places de coordonnées situées
+        # dans le carré passant par les points suivants :
+        # (i, j-radius), (i, j+radius), (i-radius, j), (i+radius, j),
+        # (i-radius, j-radius), (i-radius, j+radius),
+        # (i+radius, j-radius) et (i+radius, j+radius)
+        # On analyse ce voisinage et on n'ajoute un voisin que s'il y en a un
+        for i in range(-radius, radius+1, 1):
+            for j in range(-radius, radius+1, 1):
+                # Traitons la place voisine
+                neighbour_seat = (seat[0]+i, seat[1]+j)
+                # print("Place: ", neighbour_seat)    # DEBUG #
+                # Cette place est-elle ?
+                # - différente de la place autour de laquelle on regarde
+                # - bien comprise dans le plan de classe (coordonnées de
+                #   dépassant pas celles du plan de classe)
+                if (neighbour_seat != seat and
+                        0 <= neighbour_seat[0] <= self.row-1 and
+                        0 <= neighbour_seat[1] <= self.col-1):
+                    neighbourhood.append(neighbour_seat)
+        # On retourne notre liste de places voisines
+        return neighbourhood
+
+    def get_seats(self):
+        return list(self.mapping.keys())
 
     def is_empty_seat(self, seat):
         """Indique si une place est libre.
@@ -203,3 +281,28 @@ class SeatingPlan:
                     and self.place_student(student_two, seat_one)):
                 return True
         return False
+
+    def flush(self):
+        """Vide le plan de classe. Supprime tous les élèves placés.
+
+        :return: None
+        """
+        for seat in self.get_seats():
+            student = self.get_student(seat)
+            if student is not None:
+                self.remove_student(student)
+
+    def write_solution(self, solution):
+        """Place les élèves de la solution dans un plan de classe.
+
+        :param solution:
+            Solution de positionnement des élèves dans le plan de classe.
+        :type solution: dict
+
+        :return: None
+        """
+        for place, student in solution.items():
+            if student is not None:
+                self.place_student(student, place)
+            else:
+                self.mapping[place] = None
