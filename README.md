@@ -24,7 +24,7 @@ make html
 
 ## Auteur
 
-Jeff LANCE <jeff.lance@mala.fr>
+Jeff LANCE
 
 ## Licence
 
