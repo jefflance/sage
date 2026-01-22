@@ -40,7 +40,7 @@ class SeatingPlan:
             True s'il ne reste aucune place vide. False sinon.
         :rtype: bool
         """
-        return None in self.mapping.values()
+        return None not in self.mapping.values()
 
     def resize(self, row, col):
         """Redimensionne le plan de classe.
@@ -72,7 +72,7 @@ class SeatingPlan:
         :rtype: list
         """
         # Dimensions du plan de classe
-        n = self.raw
+        n = self.row
         m = self.col
 
         # Le plan de classe est un tableau de dimensions n x m :

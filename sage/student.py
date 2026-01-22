@@ -31,7 +31,7 @@ class Student:
         """
         self.name = name
         self.chat_lvl = chat_lvl
-        self.friends = friends
+        self.friends = friends if friends is not None else []
 
     def has_safe_neighbour(self, neighbour, delta_chat_lvl):
         """Indique si deux élèves constituent de bons voisins.

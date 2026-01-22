@@ -26,6 +26,7 @@ from sage import SeatingPlan, Engine, interface
 # Instanciation des objets
 seatingplan = SeatingPlan()
 engine = Engine()
+students_list = []
 
 
 # Fonctions du menu
